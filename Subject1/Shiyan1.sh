@@ -18,7 +18,7 @@ echo "fi" >> NewShell.sh
 echo "if [ \"$flag\" = \"write\" ]; then" >> NewShell.sh
 
 #输入要读入的参数
-echo "	read -p \"Enter content to write\" content" >> NewShell.sh
+echo "	read -p \"Enter content to write: \" content" >> NewShell.sh
 echo "	echo \"\$content\" >> \"$file\"" >> NewShell.sh
 echo "fi" >> NewShell.sh
 
