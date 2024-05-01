@@ -67,7 +67,7 @@
       
       }
       
-这道题看起来很唬人，但其实真的对于小白非常不好做，笔者摸了两周，但是接下来将通过几个部分帮助大伙理解做出这道题。
+这道题看起来很唬人，但其实真的对于小白非常不好做，笔者摸了两周踩了很多坑，但是接下来我将通过五个部分帮助大伙理解再做出这道题，重点是__enqueue_rt_entity()函数。
 
 第一部分：理解何为 实时调度实体 sched_rt_entity & 实时运行队列 rt_rq 
 
@@ -137,6 +137,132 @@
       增加运行队列上的实时任务计数。
       整个函数的目的是将一个实时调度实体加入到正确的运行队列和优先级队列中，确保实时任务能够按照预期的优先级和顺序被调度。
 
-第三部分：厘清具体实现思路
+第三部分：厘清具体实现__enqueue_rt_entity()的思路
 
+      首先，需要引用到最后一个逻辑上被加入的调度实体last_enq_se。
+
+      在插入新的调度实体时，需要判断当前调度队列上是否存在最后一个调度实体。需要通过检查last_enq_se是否为空以及它是否在链表上来判断。如果不存在最后一个调度实体，就按原方案处理，即插入到队列尾部。
       
+      需要保证最后一个调度实体last_enq_se的所在队列和将要插入的新进程属于同一个队列。通过优先级来实现，struct list_head *last_se_queue = array->queue + rt_se_prio(last_se);。
+      
+      最后，确保在调度完成后更新新加的字段last_enq_se和last_enq_prio，以便记录最后一个加入的调度实体及其优先级。
+
+第四部分：具体实现代码
+
+        // 1. kernel/sched/sched.h
+        struct rt_rq {
+        
+        struct sched_rt_entity *last_enq_se;  // 新加字段
+        int                     last_enq_prio; // 新加字段
+        
+        }
+        
+        // 2. kernel/sched/rt.c
+        void init_rt_rq()
+        {
+        /* ... */
+        
+        /* delimiter for bitsearch: */
+        __set_bit(MAX_RT_PRIO, array->bitmap);
+        // 该行以上保持不变
+           rt_rq->last_enq_se = NULL; // 初始化last_enq_se为NULL
+           rt_rq->last_enq_prio = 0;  // 初始化last_enq_prio为0
+        // 学生TODO: 请添加代码1 }// 笔者因为多次修改导致这里忘记添加初始化语句了，但没出问题
+        
+        
+        
+        // 3. kernel/sched/rt.c
+      static void __enqueue_rt_entity(struct sched_rt_entity *rt_se, unsigned int flags)
+      {
+      	struct rt_rq *rt_rq = rt_rq_of_se(rt_se);
+      	struct rt_prio_array *array = &rt_rq->active;
+      	struct rt_rq *group_rq = group_rt_rq(rt_se);
+      	struct list_head *queue = array->queue + rt_se_prio(rt_se);
+            struct sched_rt_entity *last_se = rt_rq->last_enq_se;//添加代码2，为什么要放在这里，是因为根据C90，要求变量的声明必须出现在函数的开头，我放在原要求位置会报错
+      
+      	/*
+      	 * Don't enqueue the group if its throttled, or when empty.
+      	 * The latter is a consequence of the former when a child group
+      	 * get throttled and the current group doesn't have any other
+      	 * active members.
+      	 */
+      	if (group_rq && (rt_rq_throttled(group_rq) || !group_rq->rt_nr_running)) {
+      		if (rt_se->on_list)
+      			__delist_rt_entity(rt_se, array);
+      		return;
+      	}
+      
+      
+      	if (move_entity(flags)) {
+      		WARN_ON_ONCE(rt_se->on_list);
+      		if (flags & ENQUEUE_HEAD)
+      			list_add(&rt_se->run_list, queue);
+      		else if (last_se && last_se->on_list == 1) {// 如果同时满足存在last_enq_se 以及last_enq_se在队列上 last_se->on_list == 1
+      			struct list_head *last_se_queue = array->queue + rt_se_prio(last_se);// 则定位到last_enq_se的所在队列
+      			list_add(&rt_se->run_list, last_se_queue->next);// 将新调度实体插入到last_enq_se之后
+      		}else {
+      			list_add_tail(&rt_se->run_list, queue);// 否则就按原设计，插入到运行队列最后
+      		}//添加代码3
+      		__set_bit(rt_se_prio(rt_se), array->bitmap);
+      		rt_se->on_list = 1;
+      	}
+      	rt_se->on_rq = 1;
+      
+      	
+      	inc_rt_tasks(rt_se, rt_rq);
+      
+      	rt_rq->last_enq_se = rt_se;
+      	rt_rq->last_enq_prio = rt_se_prio(rt_se);//更新last_enq_se及其优先级
+      }
+
+第五部分：编译内核
+参考：不正经的保姆级西电软工操作系统实验课教程 ==== 专题二 内核编译 https://blog.csdn.net/hhhdafahao/article/details/116762036
+
+      测试代码1
+             通过命令行切换路径到/src/01-sched-lab/kernel
+             首先执行 make 编译
+             再打开两个终端
+             分别执行 
+             make trace
+             make runa
+             make runb
+             记录此时的trace output，看pid，b.out不会永远在a.out的最后一个进程后执行
+             
+      通过命令行切换路径到/desktop/develop/kernel-openeuler-23.09 
+      
+      任何一步出错，请回到起点重新开始
+      
+      净化内核
+            sudo make mrproper
+            这条命令会删除所有的编译生成文件、内核配置文件和各种备份文件
+            
+            sudo make clean
+            这条命令会删除前一次编译过程中残留的数据
+      
+      配置文件，不需要改什么 直接Exit esc*2
+            sudo make menuconfig
+      
+      编译内核，j后面的数字是分配的核心数，根据自己得情况来给定
+            我的是 2 *6 =12
+            sudo make -j12
+      
+      重置内核
+            sudo make modules_install
+            sudo make install
+            这两部很快，如果出现了和专题1一样的结果 那基本上没啥问题了
+            直接 reboot（重启）
+            
+            如果出问题了 不妨 sudo make module 看看错到哪了
+            
+            注意：笔者在编译没出问题的情况下，安装完内核，遇到重启时无法启动系统的情况，别慌，刚启动系统时，可以切换内核，笔者切换第二个内核可以进系统，但不明白什么情况，所以仅供参考，具体情况请各位自行判断
+            
+      测试代码2
+             通过命令行切换路径到/src/01-sched-lab/kernel
+             首先执行 make 编译
+             再打开两个终端
+             分别执行 
+             make trace
+             make runa
+             make runb
+
+             再观察此时的trace output，b.out会在a.out的最后一个进程后执行，达成目标。
