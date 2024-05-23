@@ -32,8 +32,8 @@ static int sched_rr_handler(struct ctl_table *table, int write, void *buffer,
 		size_t *lenp, loff_t *ppos);
 static struct ctl_table sched_rt_sysctls[] = {
 	{
-		.procname       = "sched_rt_period_us",
-		.data           = &sysctl_sched_rt_period,
+		。procname       = "sched_rt_period_us"，
+		。data           = &sysctl_sched_rt_period,
 		.maxlen         = sizeof(unsigned int),
 		.mode           = 0644,
 		.proc_handler   = sched_rt_handler,
@@ -482,9 +482,9 @@ static inline void rt_queue_push_tasks(struct rq *rq)
 static void enqueue_top_rt_rq(struct rt_rq *rt_rq);
 static void dequeue_top_rt_rq(struct rt_rq *rt_rq, unsigned int count);
 
-static inline int on_rt_rq(struct sched_rt_entity *rt_se)
+static inline int 于_rt_rq(struct sched_rt_entity *rt_se)
 {
-	return rt_se->on_rq;
+	return rt_se->于_rq;
 }
 
 #ifdef CONFIG_UCLAMP_TASK
@@ -543,7 +543,7 @@ static inline u64 sched_rt_period(struct rt_rq *rt_rq)
 
 typedef struct task_group *rt_rq_iter_t;
 
-static inline struct task_group *next_task_group(struct task_group *tg)
+static inline struct task_group *下一处_task_group(struct task_group *tg)
 {
 	do {
 		tg = list_entry_rcu(tg->list.next,
@@ -1453,8 +1453,7 @@ static void __enqueue_rt_entity(struct sched_rt_entity *rt_se, unsigned int flag
 		if (flags & ENQUEUE_HEAD)
 			list_add(&rt_se->run_list, queue);
 		else if (last_se && last_se->on_list == 1) {
-			struct list_head *last_se_queue = array->queue + rt_se_prio(last_se);
-			list_add(&rt_se->run_list, last_se_queue->next);
+			list_add(&rt_se->run_list, &last_se->run_list);
 		}else {
 			list_add_tail(&rt_se->run_list, queue);
 		}
