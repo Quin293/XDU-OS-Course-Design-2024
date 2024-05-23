@@ -47,8 +47,7 @@ static void __enqueue_rt_entity(struct sched_rt_entity *rt_se, unsigned int flag
 		if (flags & ENQUEUE_HEAD)
 			list_add(&rt_se->run_list, queue);
 		else if (last_se && last_se->on_list == 1) {
-			struct list_head *last_se_queue = array->queue + rt_se_prio(last_se);
-			list_add(&rt_se->run_list, last_se_queue->next);
+			list_add(&rt_se->run_list, &last_se->run_list);
 		}else {
 			list_add_tail(&rt_se->run_list, queue);
 		}//添加代码3
