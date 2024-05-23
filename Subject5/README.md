@@ -198,8 +198,7 @@
       		if (flags & ENQUEUE_HEAD)
       			list_add(&rt_se->run_list, queue);
       		else if (last_se && last_se->on_list == 1) {// 如果同时满足存在last_enq_se 以及last_enq_se在队列上 last_se->on_list == 1
-      			struct list_head *last_se_queue = array->queue + rt_se_prio(last_se);// 则定位到last_enq_se的所在队列
-      			list_add(&rt_se->run_list, last_se_queue->next);// 将新调度实体插入到last_enq_se之后
+      			list_add(&rt_se->run_list, &last_se->run_list);// 将新调度实体插入到last_enq_se之后
       		}else {
       			list_add_tail(&rt_se->run_list, queue);// 否则就按原设计，插入到运行队列最后
       		}//添加代码3
