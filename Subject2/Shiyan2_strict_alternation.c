@@ -41,30 +41,37 @@ int main() {
         exit(EXIT_FAILURE);
     } else if (pid > 0) {
         // 父进程
-        while (*turn != 0) {
-            // 忙等待
+        for(int i = 0; i < 2; i++){
+             while (*turn != 0) {
+                // 忙等待
+            }
+
+            fprintf(fp, "256 PROC1 MYFILE1\n");
+            fflush(fp);  // 确保数据立即写入文件
+
+            // 将 turn 设置为 1，允许子进程写入
+            *turn = 1;
         }
 
-        fprintf(fp, "256 PROC1 MYFILE1\n");
+            // 等待子进程完成
+            wait(NULL);
 
-        // 将 turn 设置为 1，允许子进程写入
-        *turn = 1;
-
-        // 等待子进程完成
-        wait(NULL);
-
-        // 删除共享内存段
-        shmctl(shmid, IPC_RMID, NULL);
+            // 删除共享内存段
+            shmctl(shmid, IPC_RMID, NULL);
     } else {
         // 子进程
-        while (*turn != 1) {
-            // 忙等待
+        for(int i = 0; i < 2; i++){
+            while (*turn != 1) {
+                // 忙等待
+            }
+
+            fprintf(fp, "256 PROC2 MYFILE2\n");
+            fflush(fp);  // 确保数据立即写入文件
+
+            // 将 turn 设置为 0，允许父进程写入
+            *turn = 0;
         }
-
-        fprintf(fp, "256 PROC2 MYFILE2\n");
-
-        // 将 turn 设置为 0，允许父进程写入
-        *turn = 0;
+        
 
     }
 
@@ -73,6 +80,6 @@ int main() {
 
     // 分离共享内存
     shmdt(turn);
-    
+
     return 0;
 }
