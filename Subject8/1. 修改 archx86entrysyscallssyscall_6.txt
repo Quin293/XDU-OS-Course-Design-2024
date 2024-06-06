@@ -1,0 +1,92 @@
+1. 修改 arch/x86/entry/syscalls/syscall_64.tbl
+在文件末尾添加以下内容：
+
+plaintext
+548 common peep_page        sys_peep_page
+2. 修改 include/linux/syscalls.h
+在文件末尾的 #endif 前添加以下内容：
+
+c
+asmlinkage long sys_peep_page(pid_t tar_pid_nr, unsigned long tar_addr, unsigned long my_addr);
+#endif
+3. 修改 include/uapi/asm-generic/unistd.h
+在 #undef __NR_syscalls 和 #define __NR_syscalls 451 下面添加以下内容：
+
+c
+#define __NR_peep_page 548
+__SYSCALL(__NR_peep_page, sys_peep_page)
+4. 修改 mm/mmap.c
+在 do_mmap() 函数上面添加以下内容：
+
+c
+static pte_t* addr_to_pte(struct mm_struct *mm, unsigned long addr)
+{
+    return pte_offset_kernel(pmd_off(mm, addr), addr);
+}
+
+SYSCALL_DEFINE3(peep_page, pid_t, tar_pid_nr, unsigned long, tar_addr, unsigned long, my_addr)
+{
+    struct task_struct *tar_task;
+    struct mm_struct *tar_mm;
+    struct mm_struct *my_mm;
+    pte_t *tar_pte;
+    pte_t *my_pte;
+    void *tar_page;
+    void *my_page;
+
+    printk("peep_page: running!\n");
+
+    // 获取目标进程的 task_struct
+    tar_task = pid_task(find_vpid(tar_pid_nr), PIDTYPE_PID);
+    if (!tar_task) {
+        printk("peep_page: target task not found!\n");
+        return -ESRCH;
+    }
+
+    // 获取目标进程的 mm_struct
+    tar_mm = tar_task->mm;
+    if (!tar_mm) {
+        printk("peep_page: target mm_struct not found!\n");
+        return -EINVAL;
+    }
+
+    // 获取当前进程的 mm_struct
+    my_mm = current->mm;
+    if (!my_mm) {
+        printk("peep_page: current mm_struct not found!\n");
+        return -EINVAL;
+    }
+
+    // 获取目标地址的 PTE
+    tar_pte = addr_to_pte(tar_mm, tar_addr);
+    if (!tar_pte) {
+        printk("peep_page: target PTE not found!\n");
+        return -EFAULT;
+    }
+
+    // 获取当前进程地址的 PTE
+    my_pte = addr_to_pte(my_mm, my_addr);
+    if (!my_pte) {
+        printk("peep_page: current PTE not found!\n");
+        return -EFAULT;
+    }
+
+    // 获取目标页面的物理地址
+    tar_page = pte_page(*tar_pte);
+    if (!tar_page) {
+        printk("peep_page: target page not found!\n");
+        return -EFAULT;
+    }
+
+    // 获取当前进程页面的物理地址
+    my_page = pte_page(*my_pte);
+    if (!my_page) {
+        printk("peep_page: current page not found!\n");
+        return -EFAULT;
+    }
+
+    // 将目标页面的内容复制到当前进程的页面
+    memcpy(my_page, tar_page, PAGE_SIZE);
+
+    return 0;
+}
