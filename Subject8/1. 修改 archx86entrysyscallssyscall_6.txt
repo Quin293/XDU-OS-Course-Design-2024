@@ -1,24 +1,24 @@
 1. 修改 arch/x86/entry/syscalls/syscall_64.tbl
 在文件末尾添加以下内容：
 
-plaintext
 548 common peep_page        sys_peep_page
+
 2. 修改 include/linux/syscalls.h
 在文件末尾的 #endif 前添加以下内容：
 
-c
 asmlinkage long sys_peep_page(pid_t tar_pid_nr, unsigned long tar_addr, unsigned long my_addr);
 #endif
+
 3. 修改 include/uapi/asm-generic/unistd.h
 在 #undef __NR_syscalls 和 #define __NR_syscalls 451 下面添加以下内容：
 
-c
 #define __NR_peep_page 548
 __SYSCALL(__NR_peep_page, sys_peep_page)
+
 4. 修改 mm/mmap.c
 在 do_mmap() 函数上面添加以下内容：
 
-c
+
 static pte_t* addr_to_pte(struct mm_struct *mm, unsigned long addr)
 {
     return pte_offset_kernel(pmd_off(mm, addr), addr);
