@@ -1,0 +1,43 @@
+/* --------------------------------------------------------------
+ * File          : mm.bt
+ * Authors       : 西安电子科技大学:网络与信息安全国家级实验教学中心
+ * Created on    : <2024-02-01>
+ * Last modified : <2024-03-01>
+ * LICENSE       : 由实验教学中心拥有，分发需申请并征得同意
+ * -------------------------------------------------------------*/
+
+#include <linux/sched.h>
+#include <linux/mm_types.h>
+
+// 每10秒钟执行一次
+interval:hz:10
+/ pid != 0 /
+{
+    // 获取当前进程的 task_struct 结构
+    $task = (struct task_struct *)bpf_get_current_task();
+
+    // 获取进程的 mm_struct 结构
+    $mm = $task->mm;
+
+    // 如果 mm_struct 为空，跳过该进程
+    if ($mm == 0) {
+        exit();
+    }
+
+    // 获取代码段的起始位置和结束位置
+    $start_code = $mm->start_code;
+    $end_code = $mm->end_code;
+
+    // 获取数据段的起始位置和结束位置
+    $start_data = $mm->start_data;
+    $end_data = $mm->end_data;
+
+    // 获取栈的起始位置
+    $start_stack = $mm->start_stack;
+
+    // 输出进程ID和各段的地址信息
+    printf("PID: %d\n", pid);
+    printf("Code Segment: Start = %lx, End = %lx\n", $start_code, $end_code);
+    printf("Data Segment: Start = %lx, End = %lx\n", $start_data, $end_data);
+    printf("Stack Segment: Start = %lx\n", $start_stack);
+}
