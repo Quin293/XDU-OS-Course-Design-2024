@@ -14,7 +14,7 @@ interval:hz:10
 / pid != 0 /
 {
     // 获取当前进程的 task_struct 结构
-    $task = (struct task_struct *)bpf_get_current_task();
+    $task = (struct task_struct *)curtask;
 
     // 获取进程的 mm_struct 结构
     $mm = $task->mm;
