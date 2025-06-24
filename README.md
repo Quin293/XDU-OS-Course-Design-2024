@@ -15,7 +15,7 @@ Linux Kernel：OpenEuler基于Linux内核，提供了丰富的接口和工具支
 ## 1. 进程调度监控
 实时跟踪指定进程的调度情况，统计调度次数。
 提供详细的调度事件日志，便于后续分析。
-`
+```
 // switchcnt.bt
 BEGIN {
     printf("统计某进程的切换次数，按 Ctrl-C 显示结果\n\n");
@@ -29,11 +29,11 @@ kprobe:dequeue_task_fair
 END {
     printf("\n进程总共被调用%d次\n", @count);
 }
-`
+```
 ## 2. 内存布局分析
 监控指定进程中代码段、数据段及栈段的起始位置和结束位置。
 输出详细的内存分配信息，帮助开发者理解进程内存使用情况。
-`
+```
 // mm.bt
 $mm = $task->mm;
 $start_code = $mm->start_code;
@@ -44,16 +44,16 @@ $start_stack = $mm->start_stack;
 printf("Code Segment: Start = %lx, End = %lx\n", $start_code, $end_code);
 printf("Data Segment: Start = %lx, End = %lx\n", $start_data, $end_data);
 printf("Stack Segment: Start = %lx\n", $start_stack);
-`
+```
 ## 3. Runqueue长度监控
 实时获取CFS调度队列上的runqueue长度变化。
 提供动态图表展示runqueue长度随时间的变化趋势。
-`
+```
 // rqlen.bt
 $my_q = (struct cfs_rq *)curtask->se.cfs_rq;
 $len = $my_q->nr_running;
 printf("获取队列长度为：%u\n", $len);
-`
+```
 #安装指南
 环境准备
 确保您的系统已安装以下依赖项：
