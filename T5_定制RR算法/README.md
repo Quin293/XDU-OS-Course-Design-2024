@@ -1,73 +1,21 @@
-题目五：
+  RR调度算法定制实验（相关知识点1.11节）：
+  
+  对OpenEuler中的RR调度算法(桌面/develop/src/01-sched-lab/kernel/patch.c)进行定制，使其能够完成如下功能：
+  
+  若进程现在的执行顺序是：
+  
+  【1】【2】【3】
+  
+  那么当第四个进程转为运行态后，调度依然必须完全保证此顺序，即必须保持为：
+  
+  【1】【2】【3】【4】
+  
+  也就是说：若当前执行队列是【2】【3】【1】，那么进程【4】不能按照原始的RR那样，插到【1】之后，而是依然要插在【3】之后。
 
-      RR调度算法定制实验（相关知识点1.11节）：
-      
-      利用给定的RR调度程序(桌面/develop/src/01-sched-lab/kernel/patch.c)，填写相关代码，对信创操作系统中的RR调度算法进行定制，使其能够完成如下功能：
-      
-      若进程现在的执行顺序是：
-      
-      【1】【2】【3】
-      
-      那么当第四个进程转为运行态后，调度依然必须完全保证此顺序，即必须保持为：
-      
-      【1】【2】【3】【4】
-      
-      也就是说：若当前执行队列是【2】【3】【1】，那么进程【4】不能按照原始的RR那样，插到【1】之后，而是依然要插在【3】之后。即此时runqueue在接纳进程【4】后，runqueue内容变为：【2】【3】【4】【1】，而不是【2】【3】【1】【4】
-      
-      要求：理解测试程序，并运行测试程序对自己定制后的调度算法进行验证。
-
-下面是要修改的地方：共三处
+  即此时runqueue在接纳进程【4】后，runqueue内容变为：【2】【3】【4】【1】，而不是【2】【3】【1】【4】
 
 
-      // 1. kernel/sched/sched.h
-      struct rt_rq {
-      
-      struct sched_rt_entity *last_enq_se;  // 新加字段
-      int                     last_enq_prio; // 新加字段
-      
-      }
-      
-      // 2. kernel/sched/rt.c
-      void init_rt_rq()
-      {
-      /* ... */
-      
-      /* delimiter for bitsearch: */
-      __set_bit(MAX_RT_PRIO, array->bitmap);
-      // 该行以上保持不变
-      
-      // 学生TODO: 请添加代码1 }
-      
-      
-      
-      // 3. kernel/sched/rt.c
-      static void __enqueue_rt_entity(struct sched_rt_entity *rt_se, unsigned int flags)
-      {
-      /* ... */
-      
-      if (group_rq && (rt_rq_throttled(group_rq) || !group_rq->rt_nr_running)) {
-      if (rt_se->on_list)
-      __delist_rt_entity(rt_se, array);
-      return;
-      }
-      // 该行以上保持不变
-      
-        // 学生TODO: 请添加代码2
-      if (move_entity(flags)) {
-      WARN_ON_ONCE(rt_se->on_list);
-      if (flags & ENQUEUE_HEAD)
-      list_add(&rt_se->run_list, queue);
-      else {
-      // 学生TODO: 请添加代码3 }
-      
-      __set_bit(rt_se_prio(rt_se), array->bitmap);
-      rt_se->on_list = 1;
-      }
-      rt_se->on_rq = 1;
-      
-      }
-      
-这道题看起来很唬人，但其实真的对于小白非常不好做，笔者摸了两周受了很多苦，但是接下来我将通过五个部分帮助大伙理解再做出这道题，解决的重点是__enqueue_rt_entity()函数。
+我将通过五个部分解释，解决的重点是__enqueue_rt_entity()函数。
 
 第一部分：理解何为 实时调度实体 sched_rt_entity & 实时运行队列 rt_rq 
 
@@ -215,7 +163,6 @@
       }
 
 第五部分：编译内核
-参考：不正经的保姆级西电软工操作系统实验课教程 ==== 专题二 内核编译 https://blog.csdn.net/hhhdafahao/article/details/116762036
 
       测试代码1
              通过命令行切换路径到/src/01-sched-lab/kernel
@@ -248,7 +195,6 @@
       重置内核
             sudo make modules_install
             sudo make install
-            这两部很快，如果出现了和专题1一样的结果 那基本上没啥问题了
             直接 reboot（重启）
             
             如果出问题了 不妨 sudo make module 看看错到哪了
@@ -264,5 +210,3 @@
              make runb
 
              再观察此时的trace output，b.out会在a.out的最后一个进程后执行，达成目标。
-
-本文在奎恩哥的金曲折磨之夜陪伴下完成，做完实验时刚好1+0击杀舞娘望周知

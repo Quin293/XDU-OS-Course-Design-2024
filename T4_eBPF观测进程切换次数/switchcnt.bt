@@ -1,0 +1,23 @@
+#include <linux/sched.h>
+
+BEGIN
+{
+  printf("使用: bpftrace ./switchcnt.bt [PID]\n");
+  printf("统计某进程的切换次数，按 Ctrl-C 显示结果\n\n");
+  @time = nsecs
+}
+
+kprobe:dequeue_task_fair
+{
+	$target_pid = $1;
+	if(pid == $target_pid){
+	printf("进程%d被调用", pid);
+	@count++;
+	}
+
+}
+
+END {
+  printf("\n进程总共被调用%d次\n", @count);
+  @time = (nsecs-@time) / 1000000000; // 纳秒转秒
+}
