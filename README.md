@@ -54,7 +54,7 @@ $my_q = (struct cfs_rq *)curtask->se.cfs_rq;
 $len = $my_q->nr_running;
 printf("获取队列长度为：%u\n", $len);
 ```
-#安装指南
+# 安装指南
 环境准备
 确保您的系统已安装以下依赖项：
 
@@ -76,8 +76,11 @@ OpenEuler操作系统
 监控Runqueue长度
 `sudo bpftrace ./rqlen.bt`
 
-#结果展示
+# 结果展示
 所有输出都将显示在终端中，并可根据需要重定向到文件中进行进一步分析。例如：
-
-
 `sudo bpftrace ./switchcnt.bt 1234 > switch_log.txt`
+
+# 贡献者
+感谢所有为本项目做出贡献的人！
+Quin293
+JeaMianh
